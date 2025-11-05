@@ -7,6 +7,10 @@ plugins {
     id 'com.github.spotbugs' version '1.7.1'
 }
 
+repositories {
+    mavenCentral()
+}
+
 sourceSets {
     defaultTest {
         java {
@@ -19,38 +23,37 @@ sourceSets {
 }
 
 configurations {
-    defaultTestCompile.extendsFrom testCompile
+    defaultTestCompile.extendsFrom testCompileClasspath
     defaultTestImplementation.extendsFrom testImplementation
-    defaultTestRuntime.extendsFrom testRuntime
-}
-
-repositories {
-    mavenCentral()
+    defaultTestRuntime.extendsFrom testRuntimeClasspath
 }
 
 dependencies {
-    compile "com.google.guava:guava:$guavaVersion"
+    // Main dependencies
+    implementation "com.google.guava:guava:${guavaVersion}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsAnnotationsVersion}"
 
-    compileOnly "com.github.spotbugs:spotbugs-annotations:$spotbugsAnnotationsVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.2"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:5.10.2"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
 
-    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
-    testCompile "org.mockito:mockito-core:$mockitoVersion"
-    testCompile "org.assertj:assertj-core:$assertjVersion"
+    testImplementation "org.mockito:mockito-core:5.12.0"
+    testImplementation "org.mockito:mockito-junit-jupiter:5.12.0"
+    testImplementation "org.junit.platform:junit-platform-engine:1.10.2"
 }
 
-task defaultTest(type: Test) {
+tasks.register('defaultTest', Test) {
     testClassesDirs = sourceSets.defaultTest.output.classesDirs
     classpath = sourceSets.defaultTest.runtimeClasspath
+    useJUnitPlatform()
 }
-test.dependsOn defaultTest
+
+test.dependsOn tasks.named('defaultTest')
 
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
-}
-
-defaultTest {
-    useJUnitPlatform()
 }
 
 jacoco {
@@ -60,7 +63,9 @@ jacoco {
 jacocoTestReport {
     executionData tasks.withType(Test)
     reports {
-        csv.enabled true
+        xml.enabled = false
+        html.enabled = true
+        csv.enabled = true
     }
 }
 
@@ -70,7 +75,7 @@ checkstyle {
 }
 
 pmd {
-    ruleSetFiles "pmd-rules.xml"
+    ruleSetFiles = files("pmd-rules.xml")
     ruleSets = []
 }
 
@@ -81,19 +86,22 @@ tasks.withType(com.github.spotbugs.SpotBugsTask) {
     }
 }
 
-task staticAnalysis(type: GradleBuild) {
+
+tasks.register('staticAnalysis', GradleBuild) {
     tasks = [
-        'clean',
-        'checkstyleMain',
-        'checkstyleTest',
-        'checkstyleDefaultTest',
-        'pmdMain',
-        'pmdTest',
-        'pmdDefaultTest',
-        'spotbugsMain',
-        'spotbugsTest',
-        'spotbugsDefaultTest',
+            'clean',
+            'checkstyleMain',
+            'checkstyleTest',
+            'checkstyleDefaultTest',
+            'pmdMain',
+            'pmdTest',
+            'pmdDefaultTest',
+            'spotbugsMain',
+            'spotbugsTest',
+            'spotbugsDefaultTest',
     ]
 }
 
-mainClassName = 'nl.tudelft.jpacman.Launcher'
+application {
+    mainClassName = 'nl.tudelft.jpacman.Launcher'
+}
